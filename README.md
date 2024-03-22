@@ -1,135 +1,97 @@
-# Enhancing Power Line Inspections with YOLOv8 and Realsense D455
+# Enhancing Power Line Inspections with YOLOv8 Image Segmentation and Realsense D455 Depth Sensing for Precise 3D Localization
 
-Welcome to the official GitHub repository for the paper "Enhancing Power Line Inspections with YOLOv8 Image Segmentation and Realsense D455 Depth Sensing for Precise 3D Localization", presented at ICGNC 2024. This repository contains the code and documentation necessary to replicate our research findings and to facilitate further development in the field of automated power line inspections.
+Welcome to the GitHub repository for "Enhancing Power Line Inspections with YOLOv8 Image Segmentation and Realsense D455 Depth Sensing for Precise 3D Localization," as presented at ICGNC 2024. This repository contains all necessary code and documentation to replicate our research findings and further advance automated power line inspection technologies.
 
 ## Overview
 
-Our work leverages the cutting-edge capabilities of YOLOv8 for image segmentation combined with the depth sensing prowess of the Realsense D455 camera. This innovative approach allows for the precise 3D localization of power lines, significantly enhancing the efficiency and safety of inspection processes.
+Our project combines YOLOv8's image segmentation capabilities with the depth-sensing technology of the Realsense D455 camera. This approach enables precise 3D localization of power lines, significantly improving inspection efficiency and safety.
 
 ## Related Repositories
 
-- **YOLOv8 Segmentation and Detection**: For the implementation of image segmentation and detection as described in our study, please visit [Yolov8-seg-TensorRT-ROS-Jetson](https://github.com/4399chen/Yolov8-seg-TensorRT-ROS-Jetson).
+- **Image Segmentation and Detection**: For detailed implementations of image segmentation and detection, refer to [Yolov8-seg-TensorRT-ROS-Jetson](https://github.com/4399chen/Yolov8-seg-TensorRT-ROS-Jetson).
 
-- **Message Definitions**: The ROS message definitions utilized in our research can be found at the [vision_msgs repository](https://github.com/ros-perception/vision_msgs/tree/noetic-devel) under the `noetic-devel` branch.
+- **ROS Message Definitions**: Utilized ROS message definitions are available at [vision_msgs](https://github.com/ros-perception/vision_msgs/tree/noetic-devel) under the `noetic-devel` branch.
 
 ## Installation
 
-Provide detailed instructions on how to install and configure all necessary software and libraries to run the code. Include steps for cloning the repository, setting up a virtual environment, and installing dependencies.
+### Prerequisites
 
-### ROS Noetic Installation
+- **ROS Noetic**: Install ROS Noetic following the [official guide](http://wiki.ros.org/noetic/Installation).
 
-1. **Install ROS Noetic**: Follow the instructions on the [ROS Noetic installation page](http://wiki.ros.org/noetic/Installation) to install ROS Noetic on Ubuntu.
+- **Realsense_ros**: Install Realsense_ros on Jetson using instructions from [librealsense](https://github.com/IntelRealSense/librealsense/blob/master/doc/installation_jetson.md).
 
-### Realsense_ros Installation
+### Setup Procedure
 
-2. **Install Realsense_ros**: Follow the instructions on the [http://wiki.ros.org/noetic/Installation](https://github.com/IntelRealSense/librealsense/blob/master/doc/installation_jetson.md) to install Realsense_ros on Jetson.
-
-### Workspace Setup
-
-3. **Create Your Catkin Workspace**:
+1. **Create and Initialize Catkin Workspace**:
    ```bash
-   mkdir -p ~/catkin_ws/src
-   cd ~/catkin_ws/
+   mkdir -p ~/catkin_ws/src && cd ~/catkin_ws/
    catkin_make
-   ```
-
-4. **Source Your New Setup File**:
-   ```bash
    source devel/setup.bash
    ```
 
-5. **Clone This Repository**:
-   Navigate to your `src` directory and clone this repo:
+2. **Clone Necessary Repositories**:
    ```bash
-   cd ~/catkin_ws/src
+   cd src
    git clone https://github.com/4399chen/Yolov8-seg-TensorRT-ROS-Jetson.git
    git clone -b noetic-devel https://github.com/ros-perception/vision_msgs.git
    git clone https://github.com/4399chen/choosepowerline.git
    ```
-   Modify `rs_camera.launch` to enable `align_depth`
+   Ensure to modify `rs_camera.launch` to enable `align_depth`.
 
-6. **Compile the Code**:
-   Return to your workspace root and compile:
+3. **Compile the Project**:
    ```bash
    cd ~/catkin_ws
    catkin_make -j1
    ```
 
-7. **Update `.bashrc`** (Optional):
-   To automatically source your workspace in every new terminal:
+4. **Environment Setup**:
+   Add the workspace source command to your `.bashrc` file for convenience:
    ```bash
    echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
-   source ~/.bashrc
    ```
-
-This setup ensures you have a functional ROS Noetic environment ready for development and experimentation with the project.
 
 ## Usage
 
-To assist first-time users in smoothly launching the program and troubleshooting, we recommend a step-by-step approach. Here are the detailed steps:
+To launch the system:
 
-1. **Start the Realsense D455 Camera**:
-   ```
-   roslaunch realsense2_camera rs_camera.launch
-   ```
-2. **Launch the Image Segmentation Program**:
-   ```
-   roslaunch yolov8_seg yolov8_seg.launch
-   ```
-3. **Activate the Depth Extraction Node**:
-   ```
-   roslaunch choose_powerline min_rects_processor.launch
-   ```
-4. **Initiate the Mouse Selection Node**:
-   ```
-   roslaunch choose_powerline mouse.launch
-   ```
+1. **Realsense D455 Camera**:
+   ```roslaunch realsense2_camera rs_camera.launch```
+2. **Image Segmentation**:
+   ```roslaunch yolov8_seg yolov8_seg.launch```
+3. **Depth Extraction Node**:
+   ```roslaunch choose_powerline min_rects_processor.launch```
+4. **Mouse Selection Node**:
+   ```roslaunch choose_powerline mouse.launch```
 
-Additionally, the system offers a script for one-click launch to simplify the process:
+**One-click Launch Scripts**:
+- Without Visualization: `roslaunch choose_powerline powerline.launch`
+- With Rviz Visualization: `roslaunch choose_powerline powerline_with_rviz.launch`
 
-- **One-click Launch (Without Visualization Interface)**:
-  ```
-  roslaunch choose_powerline powerline.launch
-  ```
-- **One-click Launch (With Rviz Visualization Interface)**:
-  ```
-  roslaunch choose_powerline powerline_with_rviz.launch
-  ```
-
-## Common Issues and Solutions
-
-For the following common issues, try the corresponding solutions:
+## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| Realsense D455 fails to start or shows no image | Try reconnecting the USB cable of the Realsense D455. |
-| Realsense D455 depth image shows abnormalities or excessive noise | Gently touch the front of the Realsense D455 or avoid continuous use for extended periods. |
-| The RGB image resolution of Realsense D455 is below 720P | Restart the ROS node for the Realsense camera. |
-
-This guide aims to provide clear instructions for starting the program and addressing some potential issues users may encounter.
+| Realsense D455 fails to start | Reconnect the Realsense D455 USB cable. |
+| Abnormal depth image noise | Gently touch the Realsense D455 or limit continuous use. |
+| Low RGB image resolution | Restart the Realsense camera's ROS node. |
 
 ## Citation
 
-If you use our work in your research, please cite our paper using the following Bibtex entry:
+Please cite our work using the following Bibtex entry:
 
 ```bibtex
-@inproceedings{author2024enhancing,
+@inproceedings{chen2024enhancing,
   title={Enhancing Power Line Inspections with YOLOv8 Image Segmentation and Realsense D455 Depth Sensing for Precise 3D Localization},
-  author={Chen Dong, Zhan Li, Jiayu Liu},
-  booktitle={Proceedings of the International Conference on Geoscience, Navigational Computing and Cybernetics (ICGNC)},
+  author={Chen, Dong and Li, Zhan and Liu, Jiayu},
+  booktitle={ICGNC 2024},
   year={2024}
 }
 ```
 
 ## License
 
-Specify the license under which your code is released, and provide a link to the license text.
-
-```markdown
-This project is licensed under the terms of the MIT license.
-```
+This project is under the MIT license. See the LICENSE file for more details.
 
 ## Contact
 
-For any inquiries regarding this project, please contact us via email at `zhanli@hit.edu.cn`.
-
+For inquiries, please email us at zhanli@hit.edu.cn.
