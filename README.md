@@ -46,6 +46,7 @@ Provide detailed instructions on how to install and configure all necessary soft
    git clone -b noetic-devel https://github.com/ros-perception/vision_msgs.git
    git clone https://github.com/4399chen/choosepowerline.git
    ```
+   Modify `rs_camera.launch` to enable `align_depth`
 
 6. **Compile the Code**:
    Return to your workspace root and compile:
@@ -65,11 +66,47 @@ This setup ensures you have a functional ROS Noetic environment ready for develo
 
 ## Usage
 
-Explain how users can run your code, including any necessary commands and parameters. If your project includes scripts for training models, running simulations, or visualizing results, provide examples of how to execute these scripts effectively.
+To assist first-time users in smoothly launching the program and troubleshooting, we recommend a step-by-step approach. Here are the detailed steps:
 
-```bash
-python main.py --options
-```
+1. **Start the Realsense D455 Camera**:
+   ```
+   roslaunch realsense2_camera rs_camera.launch
+   ```
+2. **Launch the Image Segmentation Program**:
+   ```
+   roslaunch yolov8_seg yolov8_seg.launch
+   ```
+3. **Activate the Depth Extraction Node**:
+   ```
+   roslaunch choose_powerline min_rects_processor.launch
+   ```
+4. **Initiate the Mouse Selection Node**:
+   ```
+   roslaunch choose_powerline mouse.launch
+   ```
+
+Additionally, the system offers a script for one-click launch to simplify the process:
+
+- **One-click Launch (Without Visualization Interface)**:
+  ```
+  roslaunch choose_powerline powerline.launch
+  ```
+- **One-click Launch (With Rviz Visualization Interface)**:
+  ```
+  roslaunch choose_powerline powerline_with_rviz.launch
+  ```
+
+## Common Issues and Solutions
+
+For the following common issues, try the corresponding solutions:
+
+| Issue | Solution |
+|-------|----------|
+| Realsense D455 fails to start or shows no image | Try reconnecting the USB cable of the Realsense D455. |
+| Realsense D455 depth image shows abnormalities or excessive noise | Gently touch the front of the Realsense D455 or avoid continuous use for extended periods. |
+| The RGB image resolution of Realsense D455 is below 720P | Restart the ROS node for the Realsense camera. |
+
+This guide aims to provide clear instructions for starting the program and addressing some potential issues users may encounter.
 
 ## Citation
 
