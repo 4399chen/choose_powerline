@@ -16,11 +16,46 @@ Our work leverages the cutting-edge capabilities of YOLOv8 for image segmentatio
 
 Provide detailed instructions on how to install and configure all necessary software and libraries to run the code. Include steps for cloning the repository, setting up a virtual environment, and installing dependencies.
 
-```bash
-git clone <repository-url>
-cd <repository-directory>
-pip install -r requirements.txt
-```
+### ROS Noetic Installation
+
+1. **Install ROS Noetic**: Follow the instructions on the [ROS Noetic installation page](http://wiki.ros.org/noetic/Installation) to install ROS Noetic on Ubuntu.
+
+### Workspace Setup
+
+2. **Create Your Catkin Workspace**:
+   ```bash
+   mkdir -p ~/catkin_ws/src
+   cd ~/catkin_ws/
+   catkin_make
+   ```
+
+3. **Source Your New Setup File**:
+   ```bash
+   source devel/setup.bash
+   ```
+
+4. **Clone This Repository**:
+   Navigate to your `src` directory and clone this repo:
+   ```bash
+   cd ~/catkin_ws/src
+   git clone <repository-URL>  # Replace with the actual URL
+   ```
+
+5. **Compile the Code**:
+   Return to your workspace root and compile:
+   ```bash
+   cd ~/catkin_ws
+   catkin_make
+   ```
+
+6. **Update `.bashrc`** (Optional):
+   To automatically source your workspace in every new terminal:
+   ```bash
+   echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+This setup ensures you have a functional ROS Noetic environment ready for development and experimentation with the project.
 
 ## Usage
 
