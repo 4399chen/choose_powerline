@@ -20,35 +20,41 @@ Provide detailed instructions on how to install and configure all necessary soft
 
 1. **Install ROS Noetic**: Follow the instructions on the [ROS Noetic installation page](http://wiki.ros.org/noetic/Installation) to install ROS Noetic on Ubuntu.
 
+### Realsense_ros Installation
+
+2. **Install Realsense_ros**: Follow the instructions on the [http://wiki.ros.org/noetic/Installation](https://github.com/IntelRealSense/librealsense/blob/master/doc/installation_jetson.md) to install Realsense_ros on Jetson.
+
 ### Workspace Setup
 
-2. **Create Your Catkin Workspace**:
+3. **Create Your Catkin Workspace**:
    ```bash
    mkdir -p ~/catkin_ws/src
    cd ~/catkin_ws/
    catkin_make
    ```
 
-3. **Source Your New Setup File**:
+4. **Source Your New Setup File**:
    ```bash
    source devel/setup.bash
    ```
 
-4. **Clone This Repository**:
+5. **Clone This Repository**:
    Navigate to your `src` directory and clone this repo:
    ```bash
    cd ~/catkin_ws/src
-   git clone <repository-URL>  # Replace with the actual URL
+   git clone https://github.com/4399chen/Yolov8-seg-TensorRT-ROS-Jetson.git
+   git clone -b noetic-devel https://github.com/ros-perception/vision_msgs.git
+   git clone https://github.com/4399chen/choosepowerline.git
    ```
 
-5. **Compile the Code**:
+6. **Compile the Code**:
    Return to your workspace root and compile:
    ```bash
    cd ~/catkin_ws
-   catkin_make
+   catkin_make -j1
    ```
 
-6. **Update `.bashrc`** (Optional):
+7. **Update `.bashrc`** (Optional):
    To automatically source your workspace in every new terminal:
    ```bash
    echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
