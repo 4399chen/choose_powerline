@@ -1,0 +1,18 @@
+<launch>
+    <!-- Load camera parameters -->
+    <rosparam file="$(find choose_powerline)/config/camera_params.yaml" command="load"/>
+
+    <!-- Launch the RealSense camera node -->
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch"/>
+
+    <!-- Launch the Yolov8 Segment node -->
+    <include file="$(find yolov8_seg)/launch/yolov8_seg.launch"/>
+
+    <!-- Launch the min_rects_processor_node -->
+    <include file="$(find choose_powerline)/launch/min_rects_processor.launch"/>
+
+    <!-- Launch the min_rects_processor_node -->
+    <include file="$(find choose_powerline)/launch/mouse.launch"/>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find choose_powerline)/rviz/pl.rviz" />
+</launch>

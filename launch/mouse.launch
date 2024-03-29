@@ -1,0 +1,4 @@
+<launch>
+    <!-- 启动 min_rects_processor_node 节点 -->
+    <node name="mouse_node" pkg="choose_powerline" type="mouse_node" output="screen"/>
+</launch>
