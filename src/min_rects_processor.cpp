@@ -18,25 +18,21 @@
 #include <fstream>
 #include <deque>
 
+#include <Eigen/Dense>
+#include <vector>
+
 
 struct CameraCalibrationData {
     float fx, fy, cx, cy;
-    // 可以添加其他标定参数，如畸变系数等
 };
 
 class MinRectsProcessor
 {
 public:
-
-    std::deque<cv::Point3f> pointsBuffer25; // 为point25维护一个缓冲区
-    std::deque<cv::Point3f> pointsBuffer75; // 为point75维护一个缓冲区
-    const size_t bufferSize = 2; // 缓冲区大小，即平均的点数
-
     MinRectsProcessor(ros::NodeHandle& nh) : nh_(nh)
     {
         image_transport::ImageTransport it(nh);
         processed_image_pub_ = it.advertise("/processed_depth_image", 1);
-        // linePosePublisher = nh_.advertise<geometry_msgs::Pose>("/line_pose", 10);
         linePosePublisher = nh_.advertise<geometry_msgs::PoseStamped>("/line_pose", 10);
 
         markerPub = nh_.advertise<visualization_msgs::Marker>("/visualization_marker", 10);
@@ -47,16 +43,6 @@ public:
         nh_.param("camera_cx", cameraCalibrationData.cx, 636.1322631835938f);
         nh_.param("camera_cy", cameraCalibrationData.cy, 367.4698486328125f);
 
-        // 在构造函数中打开文件
-        // std::string fileName = generateFileName();
-        // outputFile.open(fileName);
-        // if (!outputFile.is_open()) {
-        //     ROS_ERROR("Could not open file: %s", fileName.c_str());
-        //     // 考虑是否需要退出程序或采取其他错误处理措施
-        // }
-
-
-
         depthImage_sub_.subscribe(nh_, "/yolov8_seg/modified_depth_image", 10);
         minRects_sub_.subscribe(nh_, "/yolov8_seg/minRects", 10);
 
@@ -65,18 +51,6 @@ public:
         sync_->registerCallback(boost::bind(&MinRectsProcessor::callback, this, _1, _2, _3));
 
         cv::namedWindow("MinRects Visualization", cv::WINDOW_NORMAL);
-    }
-
-    std::string generateFileName()
-    {
-        std::time_t t = std::time(nullptr);
-        char timeStr[100];
-        std::strftime(timeStr, sizeof(timeStr), "%Y%m%d-%H%M%S", std::localtime(&t));
-
-        std::string filePath = "/home/work/";
-        std::string fileName = "RealWorldPoints-" + std::string(timeStr) + ".txt";
-
-        return filePath + fileName; // 返回包含路径的文件名
     }
 
     cv::Mat processDepthImage(const sensor_msgs::Image::ConstPtr& msg, const vision_msgs::BoundingBox2D& selectedBox)
@@ -139,7 +113,8 @@ public:
         return selectedBox;
     }
 
-    cv::Point3f calculatePoint(const vision_msgs::BoundingBox2D& box, float percentage) {
+    std::vector<cv::Point3f> calculatePoints(const vision_msgs::BoundingBox2D& box, int numPoints) {
+        std::vector<cv::Point3f> points;
         // 计算旋转矩形的四个顶点
         cv::RotatedRect rotatedRect(cv::Point2f(box.center.x, box.center.y),
                                     cv::Size2f(box.size_x, box.size_y),
@@ -166,11 +141,14 @@ public:
             chosenMidPoint2 = midPoint4;
         }
 
-        // 线性插值以找到百分比位置的点
-        cv::Point2f pointOnLine = chosenMidPoint1 + percentage * (chosenMidPoint2 - chosenMidPoint1);
+        // 线性插值以找到沿最长边均匀分布的点
+        for (int i = 0; i < numPoints; ++i) {
+            float percentage = static_cast<float>(i) / (numPoints - 1);
+            cv::Point2f pointOnLine = chosenMidPoint1 + percentage * (chosenMidPoint2 - chosenMidPoint1);
+            points.push_back(cv::Point3f(pointOnLine.x, pointOnLine.y, 0.0f)); // 初始z坐标设为0
+        }
 
-        // 返回3D点（假设z坐标为0）
-        return cv::Point3f(pointOnLine.x, pointOnLine.y, 0.0f);
+        return points;
     }
 
     float calculateAverageDepth(const cv::Mat& depthMat, const cv::Point3f& point) {
@@ -221,30 +199,6 @@ public:
         return cv::Point3f(x, y, z);
     }
 
-    geometry_msgs::Pose fitLineIn3D(const cv::Point3f& point1, const cv::Point3f& point2) {
-        geometry_msgs::Pose linePose;
-
-        // 设置直线上的一个点
-        linePose.position.x = point1.x;
-        linePose.position.y = point1.y;
-        linePose.position.z = point1.z;
-
-        // 计算方向向量
-        cv::Point3f direction = point2 - point1;
-
-        // 将方向向量转换为四元数
-        tf2::Vector3 axis(direction.x, direction.y, direction.z);
-        axis.normalize();
-        tf2::Quaternion q;
-        q.setRotation(axis, 1.0); // 可能需要调整以匹配您的坐标系统
-        linePose.orientation.x = q.x();
-        linePose.orientation.y = q.y();
-        linePose.orientation.z = q.z();
-        linePose.orientation.w = q.w();
-
-        return linePose;
-    }
-
     void publishLineMarker(const cv::Point3f& point1, const cv::Point3f& point2, ros::Publisher& markerPub, const ros::Time& timeStamp) {
         visualization_msgs::Marker lineMarker;
         lineMarker.header.frame_id = "map";
@@ -279,30 +233,8 @@ public:
         markerPub.publish(lineMarker);
     }
 
-    cv::Point3f calculateMovingAverage(const cv::Point3f& newPoint, std::deque<cv::Point3f>& buffer) {
-        buffer.push_back(newPoint);
-
-        if (buffer.size() > bufferSize) {
-            buffer.pop_front();
-        }
-
-        cv::Point3f sum = {0, 0, 0};
-        for (const auto& point : buffer) {
-            sum.x += point.x;
-            sum.y += point.y;
-            sum.z += point.z;
-        }
-
-        return cv::Point3f{sum.x / buffer.size(), sum.y / buffer.size(), sum.z / buffer.size()};
-    }
-
     void callback(const vision_msgs::Detection2DArray::ConstPtr& minRectsMsg, const sensor_msgs::Image::ConstPtr& depthImageMsg, const geometry_msgs::PointStamped::ConstPtr& clickedPointMsg)
     {
-        // cameraCalibrationData.fx = 644.7825927734375;
-        // cameraCalibrationData.fy = 644.0340576171875;
-        // cameraCalibrationData.cx = 636.1322631835938;
-        // cameraCalibrationData.cy = 367.4698486328125;
-
         // 获取深度图像的尺寸
         cv::Size imageSize(depthImageMsg->width, depthImageMsg->height);
 
@@ -323,49 +255,66 @@ public:
         // 发布图像
         processed_image_pub_.publish(ros_image);
 
-        // 取selectedBox较长的中线上25%和75%的点
-        cv::Point3f point25 = calculatePoint(selectedBox, 0.15);
-        cv::Point3f point75 = calculatePoint(selectedBox, 0.85);
+        // auto start_time = ros::Time::now();
 
-        // 在深度图对两个点周围2500个像素取平均（剔除无效值），得到两个点的深度
-        float depth25 = calculateAverageDepth(processedImage, point25);
-        float depth75 = calculateAverageDepth(processedImage, point75);
+        // 例如，从深度图和bounding box中提取10个点
+        int ponits_num = 10;
+        auto imagePoints = calculatePoints(selectedBox, ponits_num);
 
-        // 根据两个点的xy和相机标定数据，算出真实度量的xy
-        cv::Point3f realWorldPoint25 = calculateRealWorldCoordinates(point25, depth25, cameraCalibrationData);
-        cv::Point3f realWorldPoint75 = calculateRealWorldCoordinates(point75, depth75, cameraCalibrationData);
+        // 使用calculateAverageDepth获取上面十个点的深度值，并输出这些值
+        std::vector<float> depths;
+        for (const auto& point : imagePoints) {
+            // 获取平均深度值
+            float averageDepth = calculateAverageDepth(processedImage, cv::Point3f(point.x, point.y, 0.0));
+            depths.push_back(averageDepth);
+            // ROS_INFO("X: %f, Y: %f, depth: %f", point.x, point.y, averageDepth);
+        }
 
-        // 平滑
-        cv::Point3f smoothedPoint25 = calculateMovingAverage(realWorldPoint25, pointsBuffer25);
-        cv::Point3f smoothedPoint75 = calculateMovingAverage(realWorldPoint75, pointsBuffer75);
+        // 去除0值影响
+        std::vector<int> validIndices; // 用于存储非零深度值的索引
+        std::vector<float> validDepths; // 用于存储非零深度值
 
-        // 根据两个点的真实度量xyz，拟合出空间中的一根直线，存储格式为geometry_msgs/Pose
-        // 将geometry_msgs/Pose格式的直线作为ROS topic发送出去
-        geometry_msgs::PoseStamped linePoseStamped;
-        linePoseStamped.header.stamp = depthImageMsg->header.stamp;
-        linePoseStamped.header.frame_id = "map";  // 根据需要替换为适当的帧 ID
-        linePoseStamped.pose = fitLineIn3D(smoothedPoint25, smoothedPoint75);
-        // linePoseStamped.pose = fitLineIn3D(realWorldPoint25, realWorldPoint75);
-        linePosePublisher.publish(linePoseStamped);
+        // 遍历depths，仅保留非零值
+        for (int i = 0; i < depths.size(); ++i) {
+            if (depths[i] != 0) {
+                validIndices.push_back(i);
+                validDepths.push_back(depths[i]);
+            }
+        }
 
-        // 将数据写入文件
-        // outputFile << "Timestamp: " << ros::Time::now() << ", "
-        //         << "RealWorldPoint25: (" << realWorldPoint25.x << ", " << realWorldPoint25.y << ", " << realWorldPoint25.z << "), "
-        //         << "RealWorldPoint75: (" << realWorldPoint75.x << ", " << realWorldPoint75.y << ", " << realWorldPoint75.z << ")\n";
+        // 现在，基于有效值的数量创建A和b
+        Eigen::MatrixXf A(validDepths.size(), 2);
+        Eigen::VectorXf b(validDepths.size());
 
-        // 使用linePose的数据，构建一个visualization_msgs/Marker，发布为rostopic，使用RVIZ订阅查看，header.frame_id = "map"
-        // publishLineMarker(realWorldPoint25, realWorldPoint75, markerPub, depthImageMsg->header.stamp);
-        publishLineMarker(smoothedPoint25, smoothedPoint75, markerPub, depthImageMsg->header.stamp);
+        // 填充A和b
+        for (int i = 0; i < validDepths.size(); ++i) {
+            A(i, 0) = validIndices[i]; // x位置
+            A(i, 1) = 1; // 常数项
+            b(i) = validDepths[i];
+        }
 
+        // 使用最小二乘法求解x = (A^T * A)^(-1) * A^T * b
+        Eigen::Vector2f x = (A.transpose() * A).inverse() * A.transpose() * b;
+
+        // 使用求得的表达式修正首尾两个点的深度值
+        float correctedFirstDepth = x[0] * 0 + x[1]; // x位置为0
+        float correctedLastDepth = x[0] * (ponits_num - 1) + x[1]; // x位置为numPoints-1
+
+        // 使用修正后的深度值重新计算真实世界坐标
+        cv::Point3f firstPointCorrected = calculateRealWorldCoordinates(cv::Point3f(imagePoints.front().x, imagePoints.front().y, 0), correctedFirstDepth, cameraCalibrationData);
+        cv::Point3f lastPointCorrected = calculateRealWorldCoordinates(cv::Point3f(imagePoints.back().x, imagePoints.back().y, 0), correctedLastDepth, cameraCalibrationData);
+
+        // 使用publishLineMarker发布这两个点的真实三维坐标（使用修正后的坐标）
+        publishLineMarker(firstPointCorrected, lastPointCorrected, markerPub, depthImageMsg->header.stamp);
+
+        // auto end_time = ros::Time::now(); // End timing
+        // ros::Duration duration = end_time - start_time;
+        // ROS_INFO("Time taken for processing: %ld seconds", duration.toNSec());
     }
 
     ~MinRectsProcessor()
     {
         cv::destroyAllWindows();
-
-        // if (outputFile.is_open()) {
-        //     outputFile.close();
-        // }
     }
 
 private:
